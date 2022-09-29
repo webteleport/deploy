@@ -48,7 +48,7 @@ spec:
           git clone https://github.com/webteleport/ufo /ufo
           cd /ufo
           go mod tidy
-          GOBIN=/usr/local/bin go install .
+          GOBIN=/usr/local/bin go install ./cmd/ufo
           tmux new-session -d -s pacman-Syu pacman -Syu --noconfirm
           ufo station
         volumeMounts:
