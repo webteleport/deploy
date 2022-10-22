@@ -17,7 +17,7 @@ spec:
         app: ufo
     spec:
       containers:
-      - image: btwiuse/arch:golang
+      - image: btwiuse/arch:ufo
         name: ufo
         ports:
         - containerPort: 3000
@@ -41,6 +41,7 @@ spec:
         - -c
         args: 
         - |
+          ufo station
           curl https://k0s.io/install.sh | bash
           git config --global user.name navigaid
           git config --global user.email navigaid@gmail.com
