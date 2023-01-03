@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: metrics
+  name: metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: metrics
+    spec:
+      containers:
+      - image: btwiuse/arch:ufo
+        name: metrics
+        ports:
+        - containerPort: 3000
+          hostPort: 303
+          protocol: UDP
+        - containerPort: 3000
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "3000"
+        - name: HOST
+          value: metrics.k0s.io
+        - name: ALT_SVC
+          value: webteleport=":303"
+        - name: CERT
+          value: /tls/tls.crt
+        - name: KEY
+          value: /tls/tls.key
+        command:
+        - bash
+        - -c
+        args: 
+        - |
+          ufo station
+        volumeMounts:
+        - mountPath: /tls
+          name: tls
+      restartPolicy: Always
+      volumes:
+      - secret:
+          secretName: metrics.k0s.io
+        name: tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    ingress.kubernetes.io/ssl-redirect: "true"
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+  name: metrics.k0s.io
+spec:
+  rules:
+  - host: metrics.k0s.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: metrics
+            port:
+              number: 3000
+        path: /
+        pathType: ImplementationSpecific
+  - host: '*.metrics.k0s.io'
+    http:
+      paths:
+      - backend:
+          service:
+            name: metrics
+            port:
+              number: 3000
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - metrics.k0s.io
+    - '*.metrics.k0s.io'
+    secretName: metrics.k0s.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: metrics.k0s.io
+spec:
+  dnsNames:
+  - metrics.k0s.io
+  - '*.metrics.k0s.io'
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  secretName: metrics.k0s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: metrics
+  name: metrics
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: metrics
+  type: ClusterIP
